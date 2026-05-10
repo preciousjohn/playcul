@@ -1,0 +1,26 @@
+# v0 sandbox internal files
+__v0_runtime_loader.js
+__v0_devtools.tsx
+__v0_jsx-dev-runtime.ts
+.snowflake/
+.v0-trash/
+.vercel/
+next.user-config.*
+
+# Environment variables
+.env*.local
+
+# Common ignores
+node_modules
+.next/
+.DS_Store
+
+# Build artifacts
+tsconfig.tsbuildinfo
+
+# Large binary / local-only files
+yolov8n-pose.pt
+chord_server.py
+
+# Use pnpm only — drop npm lockfile to avoid Vercel confusion
+package-lock.json
