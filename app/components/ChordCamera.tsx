@@ -218,38 +218,27 @@ export default function ChordCamera({ expectedChordId, onMatchChange }: Props) {
       setDetectedChord(visibleChord)
       setNoUkulele(isNoUkeNow)
 
-      // Asymmetric lock/unlock — easy to lock, hard to unlock (hysteresis).
-      // Once locked, natural hand wobble won't break it; only sustained loss does.
-      const isMatch    = isChordDetection && chordId === expectedChordRef.current
-      const isLocked   = prevLockedRef.current
+      const isMatch  = isChordDetection && chordId === expectedChordRef.current
+      const isLocked = prevLockedRef.current
 
       if (!isLocked) {
-        // Pre-lock: count up on match, count down on mismatch
+        // Build toward lock — count up on match, decay on mismatch
         lockCountRef.current = isMatch
           ? Math.min(lockCountRef.current + 1, LOCK_NEEDED)
           : Math.max(lockCountRef.current - 1, 0)
-        unlockCountRef.current = 0
-      } else {
-        // Post-lock: only unlock after UNLOCK_NEEDED sustained non-match frames
-        if (!isMatch) {
-          unlockCountRef.current = Math.min(unlockCountRef.current + 1, UNLOCK_NEEDED)
-        } else {
-          unlockCountRef.current = Math.max(unlockCountRef.current - 2, 0)
-        }
-        if (unlockCountRef.current >= UNLOCK_NEEDED) {
-          lockCountRef.current   = 0
-          unlockCountRef.current = 0
+
+        const newLocked = lockCountRef.current >= LOCK_NEEDED
+        setLockProgress(lockCountRef.current)
+        setLocked(newLocked)
+
+        if (newLocked) {
+          prevLockedRef.current = true
+          onMatchChangeRef.current?.(true)
         }
       }
-
-      const newLocked = lockCountRef.current >= LOCK_NEEDED
-      setLockProgress(lockCountRef.current)
-      setLocked(newLocked)
-
-      if (newLocked !== prevLockedRef.current) {
-        prevLockedRef.current = newLocked
-        onMatchChangeRef.current?.(newLocked)
-      }
+      // Once locked: freeze everything — don't re-run inference scoring.
+      // State stays locked until the user taps "Got it ✓" which changes
+      // expectedChordId, triggering the reset useEffect above.
 
       drawSkeleton(ctx, lms, canvas.width, canvas.height, newLocked)
     } else {
