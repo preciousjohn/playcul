@@ -41,3 +41,4 @@ chord_server.py
 yolov8n-pose.pt
 tsconfig.tsbuildinfo
 pnpm-lock.yaml
+.vercel
