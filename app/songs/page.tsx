@@ -6,7 +6,7 @@ import { songs } from "@/app/lib/data"
 import { C, discColor } from "@/app/lib/theme"
 import PageHeader from "@/app/components/PageHeader"
 import { DiscSelectorButton } from "@/app/components/DiscSelector"
-import CameraStage from "@/app/components/CameraStage"
+import SongPracticeCamera from "@/app/components/SongPracticeCamera"
 import StrumVisualizer from "@/app/components/StrumVisualizer"
 
 export default function SongsPage() {
@@ -143,7 +143,11 @@ export default function SongsPage() {
             </div>
           </div>
 
-          <CameraStage songTitle={selectedSong.title} />
+          <SongPracticeCamera
+            key={selectedId}
+            chords={selectedSong.chords}
+            songTitle={selectedSong.title}
+          />
           <StrumVisualizer key={selectedId} pattern={selectedSong.strumPattern} />
         </div>
       </div>
