@@ -260,6 +260,53 @@ out_dir.mkdir(parents=True, exist_ok=True)
 print(f"\nExporting to {out_dir}…")
 tfjs.converters.save_keras_model(model, str(out_dir))
 
+# ---------------------------------------------------------------------------
+# Patch model.json from Keras v3 format → TF.js-compatible format
+#
+# tensorflowjs_converter emits Keras v3 fields that tfjs loadLayersModel
+# cannot parse. We fix them in-place so the browser can load the model.
+# ---------------------------------------------------------------------------
+
+model_json_path = out_dir / "model.json"
+with open(model_json_path) as f:
+    mj = json.load(f)
+
+topo = mj["modelTopology"]
+if "model_config" in topo:
+    mc = topo["model_config"]
+    mj["modelTopology"] = {"class_name": mc["class_name"], "config": mc["config"]}
+    topo = mj["modelTopology"]
+
+topo["config"].pop("build_input_shape", None)
+
+def _fix_dtype(v):
+    return v["config"]["name"] if isinstance(v, dict) and v.get("class_name") == "DTypePolicy" else v
+
+def _fix_init(v):
+    return {"class_name": v["class_name"], "config": v.get("config", {})} if isinstance(v, dict) and "class_name" in v else v
+
+if "dtype" in topo["config"]:
+    topo["config"]["dtype"] = _fix_dtype(topo["config"]["dtype"])
+
+for layer in topo["config"].get("layers", []):
+    cfg = layer.get("config", {})
+    if "dtype" in cfg:
+        cfg["dtype"] = _fix_dtype(cfg["dtype"])
+    if layer["class_name"] == "InputLayer":
+        if "batch_shape" in cfg:
+            cfg["batchInputShape"] = cfg.pop("batch_shape")
+        cfg.pop("ragged", None)
+    for k in ("kernel_initializer", "bias_initializer"):
+        if k in cfg:
+            cfg[k] = _fix_init(cfg[k])
+
+with open(model_json_path, "w") as f:
+    json.dump(mj, f, separators=(",", ":"))
+
+print("model.json patched for TF.js compatibility")
+
+# ---------------------------------------------------------------------------
+
 labels_path = Path(args.labels_out)
 labels_path.parent.mkdir(parents=True, exist_ok=True)
 with open(labels_path, "w") as f:
