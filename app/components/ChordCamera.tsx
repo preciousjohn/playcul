@@ -31,9 +31,11 @@ const LABEL_MAP: Record<string, string> = {
 
 const NO_UKE = "__no_uke__"
 
-const LOCK_NEEDED          = 22    // consecutive matching frames required
-const CONFIDENCE_THRESHOLD = 0.93  // top class must be ≥ 93% confident
-const MIN_CONF_GAP         = 0.40  // top class must lead second place by ≥ 40%
+const SMOOTH_FRAMES        = 6     // rolling average over last N frames
+const LOCK_NEEDED          = 14    // frames to confirm a chord (easier to lock)
+const UNLOCK_NEEDED        = 20    // sustained non-match frames to break a lock
+const CONFIDENCE_THRESHOLD = 0.82  // smoothed top class must be ≥ 82%
+const MIN_CONF_GAP         = 0.28  // smoothed top class must lead 2nd by ≥ 28%
 
 // [MCP landmark index, TIP landmark index] for each finger
 const FINGER_PAIRS = [[5, 8], [9, 12], [13, 16], [17, 20]] as const
@@ -70,10 +72,12 @@ export default function ChordCamera({ expectedChordId, onMatchChange }: Props) {
   const labelsRef     = useRef<string[]>([])
   const landmarkerRef = useRef<any>(null)
   const tfRef         = useRef<any>(null)
-  const animFrameRef  = useRef<number | null>(null)
-  const activeRef     = useRef(false)
-  const lockCountRef  = useRef(0)
-  const prevLockedRef = useRef(false)
+  const animFrameRef    = useRef<number | null>(null)
+  const activeRef       = useRef(false)
+  const lockCountRef    = useRef(0)
+  const unlockCountRef  = useRef(0)
+  const prevLockedRef   = useRef(false)
+  const probsBufferRef  = useRef<number[][]>([])  // rolling prediction buffer
 
   const onMatchChangeRef   = useRef(onMatchChange)
   onMatchChangeRef.current = onMatchChange
@@ -90,8 +94,10 @@ export default function ChordCamera({ expectedChordId, onMatchChange }: Props) {
 
   // Reset when target chord changes
   useEffect(() => {
-    lockCountRef.current  = 0
-    prevLockedRef.current = false
+    lockCountRef.current   = 0
+    unlockCountRef.current = 0
+    prevLockedRef.current  = false
+    probsBufferRef.current = []
     setLocked(false)
     setLockProgress(0)
     setDetectedChord(null)
@@ -175,47 +181,66 @@ export default function ChordCamera({ expectedChordId, onMatchChange }: Props) {
       const input = normaliseFeatures(raw)
 
       // Run inference
-      const tfLib   = tfRef.current
+      const tfLib = tfRef.current
       if (!tfLib) { animFrameRef.current = requestAnimationFrame(runLoop); return }
-      const tensor  = tfLib.tensor2d([Array.from(input)], [1, 63])
-      const pred    = model.predict(tensor)
-      const probs   = Array.from(pred.dataSync() as Float32Array)
+      const tensor = tfLib.tensor2d([Array.from(input)], [1, 63])
+      const pred   = model.predict(tensor)
+      const rawProbs = Array.from(pred.dataSync() as Float32Array)
       tensor.dispose()
       pred.dispose()
 
-      const maxIdx   = probs.reduce((best, v, i) => (v > probs[best] ? i : best), 0)
-      const sorted   = [...probs].sort((a, b) => b - a)
-      const conf     = sorted[0]
-      const confGap  = sorted[0] - sorted[1]   // margin over second-best class
+      // Temporal smoothing — average last SMOOTH_FRAMES predictions
+      const buf = probsBufferRef.current
+      buf.push(rawProbs)
+      if (buf.length > SMOOTH_FRAMES) buf.shift()
+      const probs = rawProbs.map((_, i) => buf.reduce((s, p) => s + p[i], 0) / buf.length)
+
+      const maxIdx  = probs.reduce((best, v, i) => (v > probs[best] ? i : best), 0)
+      const sorted  = [...probs].sort((a, b) => b - a)
+      const conf    = sorted[0]
+      const confGap = sorted[0] - sorted[1]
       const rawLabel = labelsRef.current[maxIdx] ?? null
       const chordId  = rawLabel ? (LABEL_MAP[rawLabel] ?? null) : null
 
-      // Finger-curl check — an open flat palm cannot be a chord.
-      // When the hand points up (middle MCP above wrist in image), a curled/pressed
-      // fingertip drops BELOW its MCP (higher y value). Require ≥ 1 curled finger.
-      const handUp = lms[9].y < lms[0].y  // middle-finger MCP above wrist
+      // Finger-curl check — open flat palm cannot be a chord
+      const handUp = lms[9].y < lms[0].y
       let curledCount = 0
       for (const [mcp, tip] of FINGER_PAIRS) {
         if (handUp ? lms[tip].y > lms[mcp].y : lms[tip].y < lms[mcp].y) curledCount++
       }
       const hasChordGrip = curledCount >= 1
 
-      // Only surface a detection when the model is clearly decisive
-      const isDecisive = conf >= CONFIDENCE_THRESHOLD && confGap >= MIN_CONF_GAP
-      // no_ukulele is valid regardless of grip (bare hand IS the signal)
-      const isNoUkeNow = isDecisive && chordId === NO_UKE
-      // chord detections additionally require a physical grip shape
+      const isDecisive       = conf >= CONFIDENCE_THRESHOLD && confGap >= MIN_CONF_GAP
+      const isNoUkeNow       = isDecisive && chordId === NO_UKE
       const isChordDetection = isDecisive && !isNoUkeNow && hasChordGrip
-      const visibleChord = isChordDetection ? chordId : null
+      const visibleChord     = isChordDetection ? chordId : null
 
       setDetectedChord(visibleChord)
       setNoUkulele(isNoUkeNow)
 
-      // Lock logic — no_ukulele / open-palm detections decay the counter but never advance it
-      const isMatch = isChordDetection && chordId === expectedChordRef.current
-      lockCountRef.current = isMatch
-        ? Math.min(lockCountRef.current + 1, LOCK_NEEDED)
-        : Math.max(lockCountRef.current - 1, 0)
+      // Asymmetric lock/unlock — easy to lock, hard to unlock (hysteresis).
+      // Once locked, natural hand wobble won't break it; only sustained loss does.
+      const isMatch    = isChordDetection && chordId === expectedChordRef.current
+      const isLocked   = prevLockedRef.current
+
+      if (!isLocked) {
+        // Pre-lock: count up on match, count down on mismatch
+        lockCountRef.current = isMatch
+          ? Math.min(lockCountRef.current + 1, LOCK_NEEDED)
+          : Math.max(lockCountRef.current - 1, 0)
+        unlockCountRef.current = 0
+      } else {
+        // Post-lock: only unlock after UNLOCK_NEEDED sustained non-match frames
+        if (!isMatch) {
+          unlockCountRef.current = Math.min(unlockCountRef.current + 1, UNLOCK_NEEDED)
+        } else {
+          unlockCountRef.current = Math.max(unlockCountRef.current - 2, 0)
+        }
+        if (unlockCountRef.current >= UNLOCK_NEEDED) {
+          lockCountRef.current   = 0
+          unlockCountRef.current = 0
+        }
+      }
 
       const newLocked = lockCountRef.current >= LOCK_NEEDED
       setLockProgress(lockCountRef.current)
@@ -230,6 +255,7 @@ export default function ChordCamera({ expectedChordId, onMatchChange }: Props) {
     } else {
       setHandDetected(false)
       setNoUkulele(false)
+      probsBufferRef.current = []
       lockCountRef.current = Math.max(lockCountRef.current - 1, 0)
       setLockProgress(lockCountRef.current)
       if (prevLockedRef.current) {
@@ -257,6 +283,9 @@ export default function ChordCamera({ expectedChordId, onMatchChange }: Props) {
     setDetectedChord(null)
     setNoUkulele(false)
     setLockProgress(0)
+    lockCountRef.current   = 0
+    unlockCountRef.current = 0
+    probsBufferRef.current = []
   }, [])
 
   const start = useCallback(async () => {
