@@ -240,7 +240,7 @@ export default function ChordCamera({ expectedChordId, onMatchChange }: Props) {
       // State stays locked until the user taps "Got it ✓" which changes
       // expectedChordId, triggering the reset useEffect above.
 
-      drawSkeleton(ctx, lms, canvas.width, canvas.height, newLocked)
+      drawSkeleton(ctx, lms, canvas.width, canvas.height, prevLockedRef.current)
     } else {
       setHandDetected(false)
       setNoUkulele(false)
