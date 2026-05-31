@@ -40,4 +40,4 @@ out/
 chord_server.py
 yolov8n-pose.pt
 tsconfig.tsbuildinfo
-package-lock.json
+pnpm-lock.yaml
