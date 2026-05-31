@@ -20,21 +20,7 @@ export const metadata: Metadata = {
   description: 'Yele teaches you to learn by doing on any string instrument. Just you, your instrument, and music you actually want to make.',
   generator: 'v0.app',
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
+    icon: '/icon-light-32x32.png',
   },
 }
 
