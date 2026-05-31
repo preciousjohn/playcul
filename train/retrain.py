@@ -303,6 +303,19 @@ for layer in topo["config"].get("layers", []):
 with open(model_json_path, "w") as f:
     json.dump(mj, f, separators=(",", ":"))
 
+# Strip model-name prefix from weight names so TF.js can match them to layers.
+# Keras v3 stores weights as "{model_name}/{layer}/{param}" but TF.js resolves
+# layer variables as "{layer}/{param}" — without the model-name scope.
+with open(model_json_path) as f:
+    mj2 = json.load(f)
+model_prefix = model.name + "/"
+for group in mj2.get("weightsManifest", []):
+    for w in group.get("weights", []):
+        if w["name"].startswith(model_prefix):
+            w["name"] = w["name"][len(model_prefix):]
+with open(model_json_path, "w") as f:
+    json.dump(mj2, f, separators=(",", ":"))
+
 print("model.json patched for TF.js compatibility")
 
 # ---------------------------------------------------------------------------
