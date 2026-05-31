@@ -1,50 +1,39 @@
 import { notFound } from "next/navigation"
-import Link from "next/link"
-import YeleLogo from "@/app/components/YeleLogo"
 import FretboardDiagram from "@/app/components/FretboardDiagram"
 import { chords } from "@/app/lib/data"
+import { C } from "@/app/lib/theme"
+import PageHeader from "@/app/components/PageHeader"
 
 type Beat = "D" | "U" | "X"
 
 function parseBeats(pattern: string): Beat[] {
-  return pattern.split("").filter((c) => "DUX".includes(c)) as Beat[]
+  return pattern.split(/[\s]+/).filter((c) => "DUX".includes(c)) as Beat[]
 }
 
 function StrumPattern({ pattern }: { pattern: string }) {
   const beats = parseBeats(pattern)
   return (
-    <div className="bg-[#1A1A2E] rounded-2xl p-6">
-      <p className="font-sans text-white/40 text-xs uppercase tracking-widest mb-5">
+    <div style={{ background: C.ink, borderRadius: 24, padding: "22px 26px" }}>
+      <p style={{ fontFamily: "var(--font-instrument), sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,.38)", marginBottom: 18 }}>
         Strumming pattern
       </p>
-
-      {/* Beat row */}
-      <div className="flex items-end gap-4 mb-6">
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 16, marginBottom: 14 }}>
         {beats.map((beat, i) => {
           const isDown = beat === "D"
           const isMute = beat === "X"
           return (
-            <div key={i} className="flex flex-col items-center gap-2">
-              {/* Arrow */}
-              <span className={`text-2xl leading-none font-bold ${
-                isDown ? "text-[#E9A825]" : isMute ? "text-white/30" : "text-white"
-              }`}>
+            <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: 24, fontWeight: 700, lineHeight: 1, color: isDown ? C.orange : isMute ? "rgba(255,255,255,.3)" : "#fff" }}>
                 {isDown ? "↓" : isMute ? "✕" : "↑"}
               </span>
-              {/* Letter label */}
-              <span className={`font-sans text-[11px] font-semibold tracking-wider ${
-                isDown ? "text-[#E9A825]" : isMute ? "text-white/30" : "text-white/70"
-              }`}>
+              <span style={{ fontFamily: "var(--font-instrument), sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em", color: isDown ? C.orange : isMute ? "rgba(255,255,255,.3)" : "rgba(255,255,255,.7)" }}>
                 {beat}
               </span>
             </div>
           )
         })}
       </div>
-
-      <p className="font-sans text-white/25 text-[11px]">
-        ↓ = down &nbsp;·&nbsp; ↑ = up
-      </p>
+      <p style={{ fontFamily: "var(--font-instrument), sans-serif", color: "rgba(255,255,255,.25)", fontSize: 11, margin: 0 }}>↓ = down · ↑ = up</p>
     </div>
   )
 }
@@ -59,54 +48,35 @@ export default async function ChordDetailPage({
   if (!chord) notFound()
 
   return (
-    <div className="min-h-screen bg-[#EEF2F8]">
-      <header className="px-6 md:px-10 pt-8 pb-6 flex items-center justify-between">
-        <Link href="/"><YeleLogo /></Link>
-        <Link href="/chords" className="font-sans text-sm text-[#1A1A2E]/50 hover:text-[#1A1A2E] transition-colors">
-          ← Chords
-        </Link>
-      </header>
+    <div style={{ background: C.cream, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <PageHeader title={chord.name} backHref="/chords" backLabel="← Chords" />
 
-      <main className="px-6 md:px-10 pb-16 max-w-xl mx-auto">
-        {/* Title */}
-        <div className="mb-8 flex items-baseline gap-3">
-          <h1 className="font-serif text-7xl text-[#1A1A2E] leading-none">{chord.name}</h1>
-          <span className="font-sans text-lg text-[#9C8B72]">{chord.fullName}</span>
+      <main style={{ padding: "28px 32px 48px", maxWidth: 520, margin: "0 auto", width: "100%" }}>
+        <div style={{ marginBottom: 24, display: "flex", alignItems: "baseline", gap: 12 }}>
+          <h1 style={{ fontFamily: "var(--font-recolta), serif", fontSize: 64, color: C.ink, lineHeight: 1, margin: 0 }}>{chord.name}</h1>
+          <span style={{ fontFamily: "var(--font-instrument), sans-serif", fontSize: 16, color: C.mut }}>{chord.fullName}</span>
         </div>
 
-        {/* Fretboard */}
-        <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#EDE6DA] mb-4 flex flex-col items-center gap-4">
+        <div style={{ background: "rgba(255,255,255,.7)", border: `1.5px solid ${C.line}`, borderRadius: 20, padding: "28px 32px", marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
           <FretboardDiagram fingering={chord.fingering} fingers={chord.fingers} />
-          {/* Legend */}
-          <div className="flex gap-5 font-sans text-xs text-[#9C8B72]">
-            <span className="flex items-center gap-1.5">
-              <span className="w-3.5 h-3.5 rounded-full border-2 border-[#1A1A2E]/40 inline-block" />
+          <div style={{ display: "flex", gap: 20, fontFamily: "var(--font-instrument), sans-serif", fontSize: 12, color: C.mut }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 12, height: 12, borderRadius: "50%", border: `2px solid rgba(36,31,27,.35)`, display: "inline-block" }} />
               Open
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-3.5 h-3.5 rounded-full bg-[#1E50CB] inline-block" />
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 12, height: 12, borderRadius: "50%", background: C.blue, display: "inline-block" }} />
               Fretted
             </span>
           </div>
         </div>
 
-        {/* Tip */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-[#EDE6DA] mb-4">
-          <p className="font-sans text-xs uppercase tracking-widest text-[#9C8B72] mb-2">How to play it</p>
-          <p className="font-sans text-[#3B2A1A] text-base leading-relaxed">{chord.tip}</p>
+        <div style={{ background: "rgba(255,255,255,.7)", border: `1.5px solid ${C.line}`, borderRadius: 16, padding: "18px 22px", marginBottom: 16 }}>
+          <p style={{ fontFamily: "var(--font-instrument), sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: C.mut, marginBottom: 8 }}>How to play it</p>
+          <p style={{ fontFamily: "var(--font-instrument), sans-serif", color: C.ink, fontSize: 15, lineHeight: 1.65, margin: 0 }}>{chord.tip}</p>
         </div>
 
-        {/* Strum pattern */}
-        <div className="mb-8">
-          <StrumPattern pattern={chord.strumPattern} />
-        </div>
-
-        {/* Songs link */}
-        <div className="text-center">
-          <Link href="/songs" className="font-sans text-sm text-[#1E50CB] underline underline-offset-2 hover:no-underline">
-            See songs that use {chord.name} →
-          </Link>
-        </div>
+        <StrumPattern pattern={chord.strumPattern} />
       </main>
     </div>
   )

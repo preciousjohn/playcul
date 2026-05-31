@@ -1,23 +1,28 @@
+"use client"
+
+import { useState } from "react"
 import Link from "next/link"
-import YeleLogo from "@/app/components/YeleLogo"
 import { chords } from "@/app/lib/data"
+import { C, CHORD_LEVELS, type ChordLevel } from "@/app/lib/theme"
+import PageHeader from "@/app/components/PageHeader"
 
 function StringDots({ fingering }: { fingering: [number, number, number, number] }) {
   const labels = ["G", "C", "E", "A"]
   return (
-    <div className="flex gap-3 items-end">
+    <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
       {fingering.map((fret, i) => (
-        <div key={i} className="flex flex-col items-center gap-1">
-          <div
-            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all
-              ${fret === 0
-                ? "border-2 border-[#1A1A2E]/30 text-transparent"
-                : "bg-[#1E50CB] text-white shadow-sm"
-              }`}
-          >
+        <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+          <div style={{
+            width: 26, height: 26, borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 10, fontWeight: 700,
+            ...(fret === 0
+              ? { border: `2px solid ${C.line}`, color: "transparent" }
+              : { background: C.ink, color: C.cream }),
+          }}>
             {fret > 0 ? fret : ""}
           </div>
-          <span className="font-sans text-[9px] text-[#9C8B72] tracking-wide">{labels[i]}</span>
+          <span style={{ fontFamily: "var(--font-instrument), sans-serif", fontSize: 9, color: C.mut }}>{labels[i]}</span>
         </div>
       ))}
     </div>
@@ -26,59 +31,150 @@ function StringDots({ fingering }: { fingering: [number, number, number, number]
 
 function ChordCard({ chord }: { chord: typeof chords[number] }) {
   return (
-    <Link href={`/chords/${chord.id}`} className="group block">
-      <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-[#EDE6DA] hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
-        <div className="p-5">
-          {/* Chord name */}
-          <p className="font-serif text-[64px] leading-none text-[#1A1A2E] group-hover:text-[#1E50CB] transition-colors duration-200 mb-1">
-            {chord.name}
-          </p>
-          <p className="font-sans text-xs text-[#9C8B72] mb-5 tracking-wide uppercase">
-            {chord.fullName}
-          </p>
-
-          {/* String dot preview */}
-          <StringDots fingering={chord.fingering} />
-
-          <div className="flex justify-end mt-4 pt-4 border-t border-[#F0EBE1]">
-            <span className="text-[#1E50CB] opacity-0 group-hover:opacity-100 transition-opacity text-sm">
-              Learn →
-            </span>
-          </div>
-        </div>
+    <Link href={`/chords/${chord.id}`} style={{ textDecoration: "none", display: "block" }}>
+      <div style={{
+        background: "rgba(255,255,255,.55)",
+        color: C.ink,
+        border: `1.5px solid ${C.ink}`,
+        borderRadius: 16,
+        padding: "22px 24px",
+        height: "100%",
+        transition: "transform .15s ease, box-shadow .15s ease, background .15s",
+        boxShadow: "0 2px 0 rgba(36,31,27,.12)",
+      }}
+      onMouseEnter={e => {
+        const el = e.currentTarget
+        el.style.transform = "translateY(-2px)"
+        el.style.boxShadow = "0 4px 0 rgba(36,31,27,.18)"
+        el.style.background = "rgba(255,255,255,.85)"
+      }}
+      onMouseLeave={e => {
+        const el = e.currentTarget
+        el.style.transform = ""
+        el.style.boxShadow = "0 2px 0 rgba(36,31,27,.12)"
+        el.style.background = "rgba(255,255,255,.55)"
+      }}
+      >
+        <p style={{ fontFamily: "var(--font-recolta), serif", fontSize: 48, lineHeight: 1, margin: "0 0 4px" }}>
+          {chord.name}
+        </p>
+        <p style={{
+          fontFamily: "var(--font-instrument), sans-serif",
+          fontSize: 11, fontWeight: 600,
+          letterSpacing: "0.1em", textTransform: "uppercase",
+          color: C.mut, marginBottom: 18,
+        }}>
+          {chord.fullName}
+        </p>
+        <StringDots fingering={chord.fingering} />
       </div>
     </Link>
   )
 }
 
 export default function ChordsPage() {
-  return (
-    <div className="min-h-screen bg-[#EEF2F8]">
-      <header className="px-6 md:px-10 pt-8 pb-6 flex items-center justify-between">
-        <Link href="/"><YeleLogo /></Link>
-        <Link href="/" className="font-sans text-sm text-[#1A1A2E]/50 hover:text-[#1A1A2E] transition-colors">
-          ← Home
-        </Link>
-      </header>
+  const [level, setLevel] = useState<ChordLevel>("beginner")
+  const activeLevel = CHORD_LEVELS.find(l => l.key === level)!
+  const filtered = chords.filter(c => c.difficulty === level)
 
-      <main className="px-6 md:px-10 pb-16">
-        <div className="mb-10 flex items-end justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="font-serif text-4xl md:text-5xl text-[#1A1A2E] mb-2">Chords</h1>
-            <p className="font-sans text-[#6B5B4E] text-base md:text-lg">
-              Six essential ukulele chords. Learn them and you can play hundreds of songs.
+  return (
+    <div style={{ background: C.cream, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <PageHeader title="Chords" backHref="/" backLabel="← Home" />
+
+      <main style={{ padding: "28px 36px 48px", flex: 1, maxWidth: 900, margin: "0 auto", width: "100%" }}>
+
+        {/* Intro + practice CTA */}
+        <div style={{ marginBottom: 28, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
+          <div style={{ maxWidth: 480 }}>
+            <h1 style={{ fontFamily: "var(--font-recolta), serif", fontSize: 38, color: C.ink, margin: "0 0 8px", lineHeight: 1.1 }}>
+              Chord Library
+            </h1>
+            <p style={{ fontFamily: "var(--font-instrument), sans-serif", color: C.mut, fontSize: 16, margin: 0, lineHeight: 1.55 }}>
+              Browse every chord by level, then tap one to see the fingering and strumming pattern.
             </p>
           </div>
           <Link
             href="/chords/practice"
-            className="font-sans text-sm font-semibold px-5 py-2.5 bg-[#1A1A2E] text-white rounded-full hover:bg-[#2a2a4e] transition-colors shrink-0"
+            style={{
+              fontFamily: "var(--font-instrument), sans-serif",
+              fontSize: 14, fontWeight: 700,
+              padding: "11px 24px", borderRadius: 999,
+              background: C.ink, color: C.cream,
+              textDecoration: "none", flexShrink: 0,
+            }}
           >
             Practice Mode →
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-w-3xl">
-          {chords.map((chord) => (
+        {/* Level selectors */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 28 }}>
+          {CHORD_LEVELS.map((l) => {
+            const isActive = l.key === level
+            const count = chords.filter(c => c.difficulty === l.key).length
+            return (
+              <button
+                key={l.key}
+                onClick={() => setLevel(l.key)}
+                style={{
+                  background: isActive ? l.bg : "rgba(255,255,255,.45)",
+                  color: isActive ? l.fg : C.ink,
+                  border: `1.5px solid ${C.ink}`,
+                  borderRadius: 14,
+                  padding: "16px 18px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  transition: "transform .15s, box-shadow .15s",
+                  boxShadow: isActive ? `0 4px 0 ${C.ink}` : "0 2px 0 rgba(36,31,27,.15)",
+                  transform: isActive ? "translateY(-1px)" : "none",
+                }}
+              >
+                <div style={{ fontFamily: "var(--font-recolta), serif", fontSize: 20, marginBottom: 4 }}>
+                  {l.label}
+                </div>
+                <div style={{
+                  fontFamily: "var(--font-instrument), sans-serif",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: "0.06em",
+                  opacity: isActive ? 0.85 : 0.55,
+                  marginBottom: 6,
+                }}>
+                  {count} chords
+                </div>
+                <div style={{
+                  fontFamily: "var(--font-instrument), sans-serif",
+                  fontSize: 12,
+                  lineHeight: 1.4,
+                  opacity: isActive ? 0.8 : 0.5,
+                }}>
+                  {l.description}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Active level label */}
+        <p style={{
+          fontFamily: "var(--font-instrument), sans-serif",
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+          color: C.mut,
+          margin: "0 0 14px",
+        }}>
+          {activeLevel.label} · {filtered.length} chords
+        </p>
+
+        {/* Chord grid */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(168px, 1fr))",
+          gap: 12,
+        }}>
+          {filtered.map(chord => (
             <ChordCard key={chord.id} chord={chord} />
           ))}
         </div>

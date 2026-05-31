@@ -1,26 +1,43 @@
-# v0 sandbox internal files
-__v0_runtime_loader.js
-__v0_devtools.tsx
-__v0_jsx-dev-runtime.ts
-.snowflake/
-.v0-trash/
-.vercel/
-next.user-config.*
+# Dependencies
+node_modules/
 
-# Environment variables
+# Python venv and training artefacts
+yele-model/venv/
+yele-model/videos/
+train/yele_training*.json
+
+# Large generated assets (copied by postinstall on Vercel)
+public/mediapipe/
+
+# Chord diagram images (reference only, not part of the app)
+train/A/
+train/A\ sharp/
+train/B/
+train/B\ flat/
+train/C/
+train/C\ sharp/
+train/D/
+train/D\ flat/
+train/D\ sharp/
+train/E/
+train/E\ flat/
+train/F/
+train/F\ sharp/
+train/G/
+train/G\ flat/
+train/Blank\ fretboard/
+
+# OS / editor
+.DS_Store
 .env*.local
 
-# Common ignores
-node_modules
+# Next.js build output
 .next/
-.DS_Store
+out/
 
-# Build artifacts
-tsconfig.tsbuildinfo
-
-# Large binary / local-only files
-yolov8n-pose.pt
+# Tooling / misc
+.claude/
 chord_server.py
-
-# Use pnpm only — drop npm lockfile to avoid Vercel confusion
+yolov8n-pose.pt
+tsconfig.tsbuildinfo
 package-lock.json

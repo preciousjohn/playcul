@@ -2,262 +2,216 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import YeleLogo from "@/app/components/YeleLogo"
 import FretboardDiagram from "@/app/components/FretboardDiagram"
 import { chords, songs } from "@/app/lib/data"
+import { C, CHORD_LEVELS, discColor } from "@/app/lib/theme"
+import PageHeader from "@/app/components/PageHeader"
+
+type Level = "all" | "beginner" | "intermediate" | "advanced"
 
 type Beat = "D" | "U" | "X"
 
 function parseBeats(pattern: string): Beat[] {
-  return pattern.split("").filter((c) => "DUX".includes(c)) as Beat[]
+  return pattern.split(/[\s]+/).filter((c) => "DUX".includes(c)) as Beat[]
 }
 
 function splitTip(tip: string): string[] {
   return tip.split(/\.\s+/).map((s) => s.replace(/\.$/, "").trim()).filter(Boolean)
 }
 
-const GROUPS = [
-  {
-    key: "beginner",
-    label: "Beginner",
-    description: "Core open chords every player must know",
-    textColor: "text-emerald-700",
-    badgeBg: "bg-emerald-50",
-    badgeText: "text-emerald-700",
-    badgeBorder: "border-emerald-200",
-    activeBg: "bg-emerald-500",
-    dot: "bg-emerald-400",
-  },
-  {
-    key: "intermediate",
-    label: "Intermediate",
-    description: "Seventh chords and minor variations",
-    textColor: "text-violet-700",
-    badgeBg: "bg-violet-50",
-    badgeText: "text-violet-700",
-    badgeBorder: "border-violet-200",
-    activeBg: "bg-violet-500",
-    dot: "bg-violet-400",
-  },
-  {
-    key: "advanced",
-    label: "Advanced",
-    description: "Barre chords and complex voicings",
-    textColor: "text-orange-600",
-    badgeBg: "bg-orange-50",
-    badgeText: "text-orange-600",
-    badgeBorder: "border-orange-200",
-    activeBg: "bg-orange-500",
-    dot: "bg-orange-400",
-  },
+const FILTERS: { key: Level; label: string }[] = [
+  { key: "all",          label: "All" },
+  { key: "beginner",     label: "Beginner" },
+  { key: "intermediate", label: "Intermediate" },
+  { key: "advanced",     label: "Expert" },
 ]
 
 export default function ChordLibraryPage() {
+  const [filter,     setFilter]     = useState<Level>("all")
   const [selectedId, setSelectedId] = useState(chords[0].id)
 
-  const chord = chords.find((c) => c.id === selectedId) ?? chords[0]
-  const tipPoints = splitTip(chord.tip)
-  const beats = parseBeats(chord.strumPattern)
-  const relatedSongs = songs.filter((s) => s.chords.includes(chord.id))
-  const group = GROUPS.find((g) => g.key === chord.difficulty)
+  const filtered = filter === "all" ? chords : chords.filter(c => c.difficulty === filter)
+
+  // If current selection got filtered out, fall back to first visible chord
+  const chord = filtered.find(c => c.id === selectedId) ?? filtered[0]
+
+  const tipPoints    = splitTip(chord.tip)
+  const beats        = parseBeats(chord.strumPattern)
+  const relatedSongs = songs.filter(s => s.chords.includes(chord.id))
+  const chordIndex   = chords.findIndex(c => c.id === chord.id)
 
   return (
-    <div className="h-screen bg-[#EEF2F8] flex flex-col overflow-hidden">
+    <div style={{ background: C.cream, height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <PageHeader title="Chord Library" backHref="/chords/practice" backLabel="← Back" />
 
-      {/* Header */}
-      <header className="px-8 md:px-10 pt-6 pb-4 shrink-0 border-b border-[#E4DDD4] bg-[#EEF2F8]">
-        <div className="flex justify-center mb-4">
-          <Link href="/"><YeleLogo /></Link>
-        </div>
-        <div className="flex items-center justify-between">
-          <Link
-            href="/chords/practice"
-            className="font-sans text-base font-semibold px-5 py-2.5 rounded-full border-2 border-[#1A1A2E]/25 text-[#1A1A2E] hover:bg-[#1A1A2E] hover:text-white hover:border-[#1A1A2E] flex items-center gap-2 transition-all"
-          >
-            ← Back
-          </Link>
-          <p className="font-serif text-2xl text-[#1A1A2E]">Chord Library</p>
-          <div className="w-32" />
-        </div>
-      </header>
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
 
-      {/* Body */}
-      <div className="flex-1 flex overflow-hidden">
+        {/* Left — filter tabs + disc selector */}
+        <div style={{ width: "38%", flexShrink: 0, borderRight: `1.5px solid ${C.line}`, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
-        {/* ── LEFT PANEL — wide ── */}
-        <aside className="w-[360px] shrink-0 bg-white border-r border-[#EDE6DA] flex flex-col overflow-hidden">
-
-          {/* Panel header */}
-          <div className="px-6 py-4 border-b border-[#F0EBE1]">
-            <p className="font-sans text-xs uppercase tracking-widest text-[#9C8B72]">
-              {chords.length} chords · 3 levels
-            </p>
-          </div>
-
-          {/* Scrollable chord list */}
-          <div className="flex-1 overflow-y-auto">
-            {GROUPS.map((g) => {
-              const groupChords = chords.filter((c) => c.difficulty === g.key)
-              if (!groupChords.length) return null
+          {/* Filter tabs */}
+          <div style={{ flexShrink: 0, padding: "14px 18px 10px", borderBottom: `1.5px solid ${C.line}`, display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {FILTERS.map(f => {
+              const isActive = filter === f.key
               return (
-                <div key={g.key}>
-
-                  {/* Sticky section header */}
-                  <div className="sticky top-0 bg-white z-10 px-6 py-4 border-b border-[#F5F0EA]">
-                    <div className="flex items-center gap-3 mb-0.5">
-                      <span className={`font-sans text-sm font-bold uppercase tracking-widest ${g.textColor}`}>
-                        {g.label}
-                      </span>
-                      <span className={`font-sans text-[11px] font-semibold px-2 py-0.5 rounded-full border ${g.badgeBg} ${g.badgeText} ${g.badgeBorder}`}>
-                        {groupChords.length} chords
-                      </span>
-                    </div>
-                    <p className="font-sans text-xs text-[#9C8B72]">{g.description}</p>
-                  </div>
-
-                  {/* Chord rows */}
-                  {groupChords.map((c) => {
-                    const isActive = c.id === selectedId
-                    return (
-                      <button
-                        key={c.id}
-                        onClick={() => setSelectedId(c.id)}
-                        className={`w-full text-left px-6 py-4 flex items-center gap-4 border-b border-[#F5F0EA] transition-all duration-150 group ${
-                          isActive ? "bg-[#1A1A2E]" : "hover:bg-[#F7F3EE]"
-                        }`}
-                      >
-                        {/* Accent bar */}
-                        <span className={`w-1 h-9 rounded-full shrink-0 transition-all ${
-                          isActive ? g.activeBg : `bg-transparent group-hover:${g.dot} group-hover:opacity-40`
-                        }`} />
-
-                        {/* Chord name */}
-                        <span className={`font-serif text-4xl leading-none font-bold w-16 shrink-0 transition-colors ${
-                          isActive ? "text-white" : "text-[#1A1A2E]"
-                        }`}>
-                          {c.name}
-                        </span>
-
-                        {/* Full name */}
-                        <span className={`font-sans text-sm leading-snug transition-colors ${
-                          isActive ? "text-white/60" : "text-[#9C8B72]"
-                        }`}>
-                          {c.fullName}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  style={{
+                    padding: "6px 14px", borderRadius: 999,
+                    fontFamily: "var(--font-instrument), sans-serif",
+                    fontSize: 12, fontWeight: 700,
+                    border: `1.5px solid ${isActive ? C.ink : C.line}`,
+                    background: isActive ? C.ink : "transparent",
+                    color: isActive ? C.cream : C.mut,
+                    cursor: "pointer",
+                    transition: "all .12s",
+                  }}
+                >
+                  {f.label}
+                </button>
               )
             })}
           </div>
-        </aside>
 
-        {/* ── RIGHT PANEL ── */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-10 py-10">
+          {/* Chord list */}
+          <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+            {filtered.map((c, i) => {
+              const isActive = c.id === chord.id
+              const palette  = discColor(i)
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedId(c.id)}
+                  style={{
+                    background: palette.bg,
+                    color: palette.fg,
+                    border: `1.5px solid ${C.ink}`,
+                    borderRadius: 12,
+                    padding: "14px 18px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    width: "100%",
+                    transition: "transform .15s ease, box-shadow .15s ease",
+                    boxShadow: isActive ? `0 4px 0 ${C.ink}, 0 6px 20px rgba(0,0,0,.15)` : "0 2px 0 rgba(36,31,27,.25)",
+                    transform: isActive ? "translateY(-1px)" : "none",
+                  }}
+                >
+                  <span style={{ fontFamily: "var(--font-recolta), serif", fontSize: 24, lineHeight: 1 }}>{c.name}</span>
+                  <div style={{
+                    width: 36, height: 36, borderRadius: "50%",
+                    border: `1.5px solid ${palette.fg}55`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 11, color: palette.fg, paddingLeft: 2,
+                  }}>▶</div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
-            {/* Chord title */}
-            <div className="mb-8 flex items-end gap-5">
-              <h1 className="font-serif text-[100px] text-[#1A1A2E] leading-none">{chord.name}</h1>
-              <div className="pb-4">
-                <p className="font-sans text-xl text-[#9C8B72] mb-2">{chord.fullName}</p>
-                {group && (
-                  <span className={`font-sans text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-full border ${group.badgeBg} ${group.badgeText} ${group.badgeBorder}`}>
-                    {group.label}
-                  </span>
-                )}
+        {/* Right — chord detail */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 28px 28px 20px" }}>
+          <div style={{ maxWidth: 600 }}>
+
+            {/* Chord name + difficulty */}
+            <div style={{ marginBottom: 22, display: "flex", alignItems: "flex-end", gap: 16 }}>
+              <h1 style={{ fontFamily: "var(--font-recolta), serif", fontSize: 72, color: C.ink, lineHeight: 1, margin: 0 }}>
+                {chord.name}
+              </h1>
+              <div style={{ paddingBottom: 10 }}>
+                <p style={{ fontFamily: "var(--font-instrument), sans-serif", fontSize: 16, color: C.mut, margin: "0 0 6px" }}>{chord.fullName}</p>
+                <span style={{ fontFamily: "var(--font-instrument), sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", padding: "3px 10px", borderRadius: 999, background: C.cream2, border: `1.5px solid ${C.line}`, color: C.mut }}>
+                  {chord.difficulty}
+                </span>
               </div>
             </div>
 
             {/* Fretboard */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#EDE6DA] mb-6 flex flex-col items-center gap-6">
+            <div style={{ background: "rgba(255,255,255,.7)", border: `1.5px solid ${C.line}`, borderRadius: 20, padding: "28px 32px", marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
               <FretboardDiagram fingering={chord.fingering} fingers={chord.fingers} scale={1.6} />
-              <div className="flex gap-8 font-sans text-sm text-[#9C8B72]">
-                <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full border-2 border-[#1A1A2E]/40 inline-block" />
+              <div style={{ display: "flex", gap: 24, fontFamily: "var(--font-instrument), sans-serif", fontSize: 13, color: C.mut }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 14, height: 14, borderRadius: "50%", border: `2px solid rgba(36,31,27,.35)`, display: "inline-block" }} />
                   Open string
                 </span>
-                <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full bg-[#1E50CB] inline-block" />
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 14, height: 14, borderRadius: "50%", background: C.blue, display: "inline-block" }} />
                   Fretted note
                 </span>
               </div>
             </div>
 
             {/* How to play */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#EDE6DA] mb-6">
-              <p className="font-sans text-sm font-bold uppercase tracking-widest text-[#9C8B72] mb-6">
+            <div style={{ background: "rgba(255,255,255,.7)", border: `1.5px solid ${C.line}`, borderRadius: 20, padding: "22px 26px", marginBottom: 16 }}>
+              <p style={{ fontFamily: "var(--font-instrument), sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: C.mut, marginBottom: 16 }}>
                 How to play
               </p>
-              <ul className="flex flex-col gap-5">
+              <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 14 }}>
                 {tipPoints.map((point, i) => (
-                  <li key={i} className="flex gap-4 items-start">
-                    <span className="mt-2 w-2.5 h-2.5 rounded-full bg-[#E9A825] shrink-0" />
-                    <p className="font-sans text-[#3B2A1A] text-lg leading-relaxed">{point}</p>
+                  <li key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <span style={{ marginTop: 7, width: 8, height: 8, borderRadius: "50%", background: C.orange, flexShrink: 0 }} />
+                    <p style={{ fontFamily: "var(--font-instrument), sans-serif", color: C.ink, fontSize: 16, lineHeight: 1.6, margin: 0 }}>{point}</p>
                   </li>
                 ))}
               </ul>
             </div>
 
             {/* Strumming pattern */}
-            <div className="bg-[#1A1A2E] rounded-3xl p-8 mb-6">
-              <p className="font-sans text-sm font-bold uppercase tracking-widest text-white/40 mb-6">
+            <div style={{ background: C.ink, borderRadius: 24, padding: "22px 26px", marginBottom: 16 }}>
+              <p style={{ fontFamily: "var(--font-instrument), sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "rgba(255,255,255,.38)", marginBottom: 18 }}>
                 Strumming pattern
               </p>
-              <div className="flex items-end gap-6 flex-wrap mb-5">
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 20, flexWrap: "wrap", marginBottom: 12 }}>
                 {beats.map((beat, i) => {
                   const isDown = beat === "D"
                   const isMute = beat === "X"
                   return (
-                    <div key={i} className="flex flex-col items-center gap-2">
-                      <span className={`text-4xl leading-none font-bold ${
-                        isDown ? "text-[#E9A825]" : isMute ? "text-white/30" : "text-white"
-                      }`}>
+                    <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 28, fontWeight: 700, lineHeight: 1, color: isDown ? C.orange : isMute ? "rgba(255,255,255,.3)" : "#fff" }}>
                         {isDown ? "↓" : isMute ? "✕" : "↑"}
                       </span>
-                      <span className={`font-sans text-sm font-semibold tracking-wider ${
-                        isDown ? "text-[#E9A825]" : isMute ? "text-white/30" : "text-white/70"
-                      }`}>
+                      <span style={{ fontFamily: "var(--font-instrument), sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", color: isDown ? C.orange : isMute ? "rgba(255,255,255,.3)" : "rgba(255,255,255,.7)" }}>
                         {beat}
                       </span>
                     </div>
                   )
                 })}
               </div>
-              <p className="font-sans text-white/25 text-xs">↓ down &nbsp;·&nbsp; ↑ up &nbsp;·&nbsp; ✕ mute</p>
+              <p style={{ fontFamily: "var(--font-instrument), sans-serif", color: "rgba(255,255,255,.25)", fontSize: 11, margin: 0 }}>↓ down · ↑ up · ✕ mute</p>
             </div>
 
-            {/* Related songs */}
+            {/* Songs using this chord */}
             {relatedSongs.length > 0 && (
-              <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#EDE6DA]">
-                <p className="font-sans text-sm font-bold uppercase tracking-widest text-[#9C8B72] mb-5">
+              <div style={{ background: "rgba(255,255,255,.7)", border: `1.5px solid ${C.line}`, borderRadius: 20, padding: "22px 26px" }}>
+                <p style={{ fontFamily: "var(--font-instrument), sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: C.mut, marginBottom: 14 }}>
                   Songs using {chord.name}
                 </p>
-                <div className="flex flex-col gap-3">
-                  {relatedSongs.map((s) => (
-                    <Link
-                      key={s.id}
-                      href={`/songs/${s.id}`}
-                      className="flex items-center justify-between p-5 rounded-2xl border border-[#EDE6DA] hover:border-[#1E50CB] hover:bg-[#EEF2F8] transition-all group"
-                    >
-                      <div>
-                        <p className="font-serif text-xl text-[#1A1A2E] group-hover:text-[#1E50CB] transition-colors mb-0.5">
-                          {s.title}
-                        </p>
-                        <p className="font-sans text-sm text-[#9C8B72]">{s.artist}</p>
-                      </div>
-                      <span className="font-sans text-sm text-[#1E50CB] opacity-0 group-hover:opacity-100 transition-opacity">
-                        Practice →
-                      </span>
-                    </Link>
-                  ))}
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {relatedSongs.map((s, i) => {
+                    const palette = discColor((chordIndex + i + 1) % 10)
+                    return (
+                      <Link
+                        key={s.id}
+                        href="/songs"
+                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderRadius: 12, background: palette.bg, color: palette.fg, border: `1.5px solid ${C.ink}`, textDecoration: "none" }}
+                      >
+                        <div>
+                          <p style={{ fontFamily: "var(--font-recolta), serif", fontSize: 18, margin: "0 0 2px" }}>{s.title}</p>
+                          <p style={{ fontFamily: "var(--font-instrument), sans-serif", fontSize: 12, opacity: 0.75, margin: 0 }}>{s.artist}</p>
+                        </div>
+                        <span style={{ fontFamily: "var(--font-instrument), sans-serif", fontSize: 13, fontWeight: 600, opacity: 0.85 }}>Practice →</span>
+                      </Link>
+                    )
+                  })}
                 </div>
               </div>
             )}
-
           </div>
-        </main>
+        </div>
       </div>
     </div>
   )

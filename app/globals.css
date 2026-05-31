@@ -124,3 +124,90 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ── Yele design tokens ───────────────────────────────── */
+:root {
+  --cream:   #f4ebd8;
+  --cream-2: #efe3cb;
+  --ink:     #241f1b;
+  --blue:    #1c3a8c;
+  --lime:    #c8e85a;
+  --orange:  #ea6a2e;
+  --mut:     #6f6451;
+  --line:    #d9cbac;
+}
+
+/* ── Ticker / marquee ─────────────────────────────────── */
+@keyframes ticker-scroll {
+  to { transform: translateX(-50%); }
+}
+.ticker-track {
+  display: inline-flex;
+  gap: 34px;
+  padding: 9px 0;
+  animation: ticker-scroll 32s linear infinite;
+  white-space: nowrap;
+}
+
+/* ── Reveal on scroll ─────────────────────────────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity .7s ease, transform .7s cubic-bezier(.2,.8,.2,1);
+}
+.reveal.in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Strum chord chips ────────────────────────────────── */
+.chord-chip {
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  padding: 7px 15px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  background: rgba(255,255,255,.35);
+  color: var(--ink);
+  transition: background .15s, transform .15s;
+}
+.chord-chip:hover {
+  background: #fff;
+  transform: translateY(-2px);
+}
+.chord-chip--active {
+  background: var(--orange) !important;
+  color: #fff !important;
+  transform: none !important;
+}
+
+/* ── Strum big word ───────────────────────────────────── */
+.strum-word {
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(100px, 28vw, 200px);
+  line-height: 0.78;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  color: transparent;
+  -webkit-text-stroke: 5px var(--ink);
+  text-stroke: 5px var(--ink);
+  margin-top: 30px;
+  position: relative;
+  user-select: none;
+}
+.strum-word::after {
+  content: "STRUM";
+  position: absolute;
+  left: 7px;
+  top: 8px;
+  z-index: -1;
+  color: var(--ink);
+  -webkit-text-stroke: 0;
+}
+
+/* ── Live dot blink ───────────────────────────────────── */
+@keyframes blink {
+  50% { opacity: .25; }
+}

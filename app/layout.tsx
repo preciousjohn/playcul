@@ -1,20 +1,19 @@
 import type { Metadata } from 'next'
-import { Instrument_Sans, Lora } from 'next/font/google'
+import { DM_Sans, Instrument_Serif } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const instrumentSans = Instrument_Sans({ 
+const dmSans = DM_Sans({
   subsets: ["latin"],
   variable: '--font-instrument'
-});
+})
 
-// Lora as a stand-in for Recolta (similar elegant serif)
-// Replace with actual Recolta font when font files are available
-const lora = Lora({
+const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
-  weight: ['400', '500', '600', '700'],
+  weight: '400',
+  style: ['normal', 'italic'],
   variable: '--font-recolta'
-});
+})
 
 export const metadata: Metadata = {
   title: 'Yele - Learn Guitar Your Way',
@@ -46,7 +45,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${instrumentSans.variable} ${lora.variable} font-sans antialiased`}>
+      <body className={`${dmSans.variable} ${instrumentSerif.variable} font-sans antialiased`}>
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

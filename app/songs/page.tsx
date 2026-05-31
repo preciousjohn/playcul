@@ -1,81 +1,152 @@
+"use client"
+
+import { useState } from "react"
 import Link from "next/link"
-import YeleLogo from "@/app/components/YeleLogo"
 import { songs } from "@/app/lib/data"
-
-function SongCard({ song }: { song: typeof songs[number] }) {
-  return (
-    <Link href={`/songs/${song.id}`} className="group block">
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#EDE6DA] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-        <div className="flex items-start justify-between gap-4 mb-3">
-          <div className="flex-1 min-w-0">
-            <h2 className="font-serif text-xl md:text-2xl text-[#1A1A2E] leading-snug group-hover:text-[#1E50CB] transition-colors">
-              {song.title}
-            </h2>
-            <p className="font-sans text-sm text-[#9C8B72] mt-0.5">{song.artist}</p>
-          </div>
-          <span className={`shrink-0 font-sans text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${
-            song.difficulty === "easy"
-              ? "bg-emerald-50 text-emerald-600"
-              : "bg-violet-50 text-violet-600"
-          }`}>
-            {song.difficulty}
-          </span>
-        </div>
-
-        <p className="font-sans text-[#6B5B4E] text-sm leading-relaxed mb-4">{song.description}</p>
-
-        <div className="flex items-center justify-between">
-          {/* Chord pills */}
-          <div className="flex flex-wrap gap-1.5">
-            {song.chords.map((c) => (
-              <span
-                key={c}
-                className="font-sans text-xs font-semibold px-2 py-0.5 rounded-full bg-[#EEF2F8] text-[#1E50CB] border border-[#C5D0E8]"
-              >
-                {c}
-              </span>
-            ))}
-          </div>
-          <span className="font-sans text-xs text-[#1E50CB] opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-2">
-            Practice →
-          </span>
-        </div>
-      </div>
-    </Link>
-  )
-}
+import { C, discColor } from "@/app/lib/theme"
+import PageHeader from "@/app/components/PageHeader"
+import { DiscSelectorButton } from "@/app/components/DiscSelector"
+import CameraStage from "@/app/components/CameraStage"
+import StrumVisualizer from "@/app/components/StrumVisualizer"
 
 export default function SongsPage() {
+  const [selectedId, setSelectedId] = useState(songs[0].id)
+  const selectedSong = songs.find(s => s.id === selectedId)!
+
   return (
-    <div className="min-h-screen bg-[#EEF2F8]">
-      <header className="px-8 md:px-12 pt-6 pb-4 shrink-0">
-        <div className="flex justify-center mb-4">
-          <Link href="/"><YeleLogo /></Link>
-        </div>
-        <div className="flex items-center">
-          <Link
-            href="/"
-            className="font-sans text-base font-semibold px-5 py-2.5 rounded-full border-2 border-[#1A1A2E]/25 text-[#1A1A2E] hover:bg-[#1A1A2E] hover:text-white hover:border-[#1A1A2E] flex items-center gap-2 transition-all"
-          >
-            ← Back
-          </Link>
-        </div>
-      </header>
+    <div style={{ background: C.cream, height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <PageHeader title="Songs" />
 
-      <main className="px-6 md:px-10 pb-16 max-w-2xl mx-auto">
-        <div className="mb-10">
-          <h1 className="font-serif text-4xl md:text-5xl text-[#1A1A2E] mb-2">Songs</h1>
-          <p className="font-sans text-[#6B5B4E] text-base md:text-lg">
-            Real songs you'll want to play. Tap one to practise with a strumming guide.
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+
+        {/* Left — disc selector */}
+        <div style={{
+          width: "40%",
+          flexShrink: 0,
+          overflowY: "auto",
+          padding: "24px 28px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+        }}>
+          <p style={{
+            fontFamily: "var(--font-instrument), sans-serif",
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            color: C.mut,
+            margin: "0 0 4px",
+          }}>
+            {songs.length} songs · pick one to start
           </p>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          {songs.map((song) => (
-            <SongCard key={song.id} song={song} />
+          {songs.map((song, i) => (
+            <DiscSelectorButton
+              key={song.id}
+              title={song.title}
+              subtitle={song.chords.join(" • ")}
+              palette={discColor(i)}
+              isActive={song.id === selectedId}
+              onClick={() => setSelectedId(song.id)}
+            />
           ))}
         </div>
-      </main>
+
+        {/* Right — overview + camera + strumming */}
+        <div style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "24px 32px 28px 16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 18,
+        }}>
+
+          {/* Song overview */}
+          <div style={{
+            background: "rgba(255,255,255,.72)",
+            border: `1.5px solid ${C.line}`,
+            borderRadius: 20,
+            padding: "22px 26px",
+          }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <h2 style={{
+                  fontFamily: "var(--font-recolta), serif",
+                  fontSize: 28,
+                  color: C.ink,
+                  margin: "0 0 6px",
+                  lineHeight: 1.15,
+                  letterSpacing: "-0.01em",
+                }}>
+                  {selectedSong.title}
+                </h2>
+                <p style={{
+                  fontFamily: "var(--font-instrument), sans-serif",
+                  fontSize: 15,
+                  color: C.mut,
+                  margin: 0,
+                }}>
+                  {selectedSong.artist}
+                </p>
+              </div>
+              <span style={{
+                flexShrink: 0,
+                fontFamily: "var(--font-instrument), sans-serif",
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                padding: "4px 12px",
+                borderRadius: 999,
+                background: selectedSong.difficulty === "easy" ? "#dcf5dc" : "#ede0f5",
+                color: selectedSong.difficulty === "easy" ? "#2a6b2a" : "#5a2a7a",
+              }}>
+                {selectedSong.difficulty}
+              </span>
+            </div>
+            <p style={{
+              fontFamily: "var(--font-instrument), sans-serif",
+              fontSize: 15,
+              lineHeight: 1.65,
+              color: C.ink,
+              margin: 0,
+              opacity: 0.88,
+            }}>
+              {selectedSong.description}
+            </p>
+
+            <div style={{ marginTop: 18, paddingTop: 18, borderTop: `1.5px solid ${C.line}` }}>
+              <p style={{ fontFamily: "var(--font-instrument), sans-serif", fontSize: 10, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: C.mut, marginBottom: 10 }}>
+                Chords you'll need
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {selectedSong.chords.map(ch => (
+                  <Link
+                    key={ch}
+                    href={`/chords/${ch}`}
+                    style={{
+                      fontFamily: "var(--font-recolta), serif",
+                      fontSize: 15,
+                      padding: "5px 14px",
+                      borderRadius: 999,
+                      border: `1.5px solid ${C.ink}`,
+                      color: C.ink,
+                      background: C.cream2,
+                      textDecoration: "none",
+                    }}
+                  >
+                    {ch}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <CameraStage songTitle={selectedSong.title} />
+          <StrumVisualizer key={selectedId} pattern={selectedSong.strumPattern} />
+        </div>
+      </div>
     </div>
   )
 }
